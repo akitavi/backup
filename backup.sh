@@ -1,6 +1,10 @@
 #!/usr/bin/bash
 
-DBNAME='home'
+#email info
+FROM='Envi\ System\<groov6000@gmail.com\>'
+TO='apalse@yandex.ru'
+
+DBNAME='DB_NAME'
 NOW=$(date +%d.%m.%Y)
 FULLNAME=db\_$DBNAME\_$NOW.sql
 USER='test'
@@ -15,5 +19,5 @@ TEXT="<i>Новых заметок: </i> <br>
 
 mysqldump -u $USER -p$PASSWD $DBNAME > ./$FULLNAME 2>/dev/null
 zip $FULLNAME.zip $FULLNAME && \
-echo $TEXT | mail -a 'Content-type: text/html; charset="UTF8"' -s "Report for $NOW" -aFrom:Envi\ System\<groov6000@gmail.com\> apalse@yandex.ru  && \
+echo $TEXT | mail -a 'Content-type: text/html; charset="UTF8"' -s "Report for $NOW" -aFrom:$FROM $TO  && \
 rm $FULLNAME && mv $FULLNAME.zip ./archive
