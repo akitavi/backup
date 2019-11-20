@@ -1,14 +1,18 @@
 #!/usr/bin/bash
 
 #email info
-FROM='Envi\ System\<groov6000@gmail.com\>'
-TO='apalse@yandex.ru'
+FROM='Envi\ System\<alex@gmail.com\>'
+TO='alex@yandex.ru'
 
+#db connect                                                                                
 DBNAME='DB_NAME'
 NOW=$(date +%d.%m.%Y)
 FULLNAME=db\_$DBNAME\_$NOW.sql
 USER='test'
 PASSWD='test'
+
+#select
+
 NUMBER="32"
 STRING="Its a var"
 TEXT="<i>Новых заметок: </i> <br>
@@ -19,5 +23,6 @@ TEXT="<i>Новых заметок: </i> <br>
 
 mysqldump -u $USER -p$PASSWD $DBNAME > ./$FULLNAME 2>/dev/null
 zip $FULLNAME.zip $FULLNAME && \
-echo $TEXT | mail -a 'Content-type: text/html; charset="UTF8"' -s "Report for $NOW" -aFrom:$FROM $TO  && \
+echo $TEXT | mutt -e "set content_type=text/html" -s "Report for $NOW" $TO  -a ./$FULLNAME.zip && \
+echo $FULLNAME
 rm $FULLNAME && mv $FULLNAME.zip ./archive
