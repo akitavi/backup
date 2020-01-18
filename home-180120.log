@@ -1,9 +1,0 @@
-#### START BACKUP 18-01-20 12:18:18 ####
-Mysql connect: SUCCESS!
-Start mysqldump on DB: home
-Mysqldump created: SUCCESS!
-Archive created: SUCCESS!
-Archive size: 92K
-Deleted tmp file...
-#########  FINISH  ##########
-|----------------------------|
