@@ -1,28 +1,49 @@
-#!/usr/bin/bash
+#/usr/bin/bash
 
-#email info
-FROM='Envi\ System\<alex@gmail.com\>'
-TO='alex@yandex.ru'
-
-#db connect                                                                                
-DBNAME='DB_NAME'
-NOW=$(date +%d.%m.%Y)
-FULLNAME=db\_$DBNAME\_$NOW.sql
-USER='test'
-PASSWD='test'
-
-#select
-
-NUMBER="32"
-STRING="Its a var"
-TEXT="<i>Новых заметок: </i> <br>
- <i>Всего заметок: </i> <br>
- <i>Попыток входа на сайт: </i> <br>
- <b>Бэк ап во вложении</b>"
+#Параметры подключения, остальные данные для подключения в файле ~/.my.cnf
+DBNAME='home'
 
 
-mysqldump -u $USER -p$PASSWD $DBNAME > ./$FULLNAME 2>/dev/null
-zip $FULLNAME.zip $FULLNAME && \
-echo $TEXT | mutt -e "set content_type=text/html" -s "Report for $NOW" $TO  -a ./$FULLNAME.zip && \
-echo $FULLNAME
-rm $FULLNAME && mv $FULLNAME.zip ./archive
+#
+NOW=$(date +%d%m%y)
+NOW_FULL=$(date "+%d-%m-%y %T")
+FULLNAME="$DBNAME-$NOW.sql"
+ARCHNAME="$DBNAME-$NOW"
+BKP_DIR="/home/akit/Code/backup_sh/backups"
+LOG="./$ARCHNAME.log"
+
+
+echo "#### START BACKUP $NOW_FULL ####" >> $LOG
+
+#Test connect MYSQL
+mysql -e "quit" 2>/dev/null
+test_con=$?
+
+if [[ $test_con != 0 ]]; then
+	echo "ERROR: Mysql connect test FAILED!" >> $LOG
+	echo "Exit" >> $LOG
+	else
+	echo "Mysql connect: SUCCESS!" >> $LOG
+	echo "Start mysqldump on DB: $DBNAME" >> $LOG
+	#Выгрузка и архивация базы
+	mysqldump $DBNAME > ./$FULLNAME 2>/dev/null
+		if [[ -s  ./$FULLNAME ]]; then
+		echo "Mysqldump created: SUCCESS!" >> $LOG
+		tar -czf "$BKP_DIR/$ARCHNAME.gz" $FULLNAME 2> /dev/null
+			if [[ -s  $BKP_DIR/$ARCHNAME.gz ]]; then
+				echo "Archive created: SUCCESS!" >> $LOG
+				ARCH_SIZE=$(du -h $BKP_DIR/$ARCHNAME.gz | cut -f1)
+				echo "Archive size: $ARCH_SIZE" >> $LOG
+			else
+				echo "ERROR: archive FAILED!" >> $LOG
+			fi
+		else
+		echo "ERROR: mysqdump FAILED!" >> $LOG
+	fi
+echo "Deleted tmp file..." >> $LOG
+rm $FULLNAME
+
+fi
+echo "#########  FINISH  ##########"  >> $LOG
+echo "|----------------------------|"  >> $LOG
+exit
