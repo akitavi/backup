@@ -1,49 +1,55 @@
-#/usr/bin/bash
+#!/bin/bash
 
-#Параметры подключения, остальные данные для подключения в файле ~/.my.cnf
+#MYSQLDUMP simple script
+
+
 DBNAME='home'
-
-
-#
 NOW=$(date +%d%m%y)
 NOW_FULL=$(date "+%d-%m-%y %T")
 FULLNAME="$DBNAME-$NOW.sql"
 ARCHNAME="$DBNAME-$NOW"
-BKP_DIR="/home/akit/Code/backup_sh/backups"
-LOG="./$ARCHNAME.log"
+BKP_DIR="/root/backups"
+LOG="/mnt/db_backup/logs/backup_db_$DBNAME.log"
+FINDIR="/mnt/db_backup"
+
+#удобненькая функция
+echolog() {
+	echo "$1" >> $LOG
+}
 
 
-echo "#### START BACKUP $NOW_FULL ####" >> $LOG
-
+echolog "#### START BACKUP $NOW_FULL ####" 
 #Test connect MYSQL
 mysql -e "quit" 2>/dev/null
 test_con=$?
 
 if [[ $test_con != 0 ]]; then
-	echo "ERROR: Mysql connect test FAILED!" >> $LOG
-	echo "Exit" >> $LOG
-	else
-	echo "Mysql connect: SUCCESS!" >> $LOG
-	echo "Start mysqldump on DB: $DBNAME" >> $LOG
-	#Выгрузка и архивация базы
-	mysqldump $DBNAME > ./$FULLNAME 2>/dev/null
-		if [[ -s  ./$FULLNAME ]]; then
-		echo "Mysqldump created: SUCCESS!" >> $LOG
-		tar -czf "$BKP_DIR/$ARCHNAME.gz" $FULLNAME 2> /dev/null
+	echolog "Mysql connect: FAILED!" 
+	echolog "Exit" 
+else
+	echolog "Mysql connect: SUCCESS!"
+	echolog "Start full mysqldump on DB: $DBNAME" 
+#Выгрузка и архивация базы
+	mysqldump $DBNAME > "$FULLNAME" 2>/dev/null
+		if [[ -s  $FULLNAME ]]; then
+		echolog "Mysqldump created: SUCCESS!" 
+		tar -czf "$BKP_DIR/$ARCHNAME.gz" "$FULLNAME" 2> /dev/null
 			if [[ -s  $BKP_DIR/$ARCHNAME.gz ]]; then
-				echo "Archive created: SUCCESS!" >> $LOG
-				ARCH_SIZE=$(du -h $BKP_DIR/$ARCHNAME.gz | cut -f1)
-				echo "Archive size: $ARCH_SIZE" >> $LOG
+#Архивация 
+				echolog "Archive created: SUCCESS!" 
+				ARCH_SIZE=$(du -h $BKP_DIR/"$ARCHNAME".gz | cut -f1)
+				echolog "Archive size: $ARCH_SIZE" 
 			else
-				echo "ERROR: archive FAILED!" >> $LOG
+				echolog "Archive created: FAILED!" 
 			fi
 		else
-		echo "ERROR: mysqdump FAILED!" >> $LOG
+		echolog "Mysqldump created: FAILED!" 
 	fi
-echo "Deleted tmp file..." >> $LOG
-rm $FULLNAME
+echolog "Deleted tmp file..." 
+rm "$FULLNAME"
+rsync $BKP_DIR/"$ARCHNAME".gz $FINDIR
 
 fi
-echo "#########  FINISH  ##########"  >> $LOG
-echo "|----------------------------|"  >> $LOG
+echolog "#########  FINISH  ##########" 
+echolog "|----------------------------|"  
 exit
