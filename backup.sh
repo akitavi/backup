@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/bash
 
 #MYSQLDUMP simple script
 
@@ -8,48 +8,54 @@ NOW=$(date +%d%m%y)
 NOW_FULL=$(date "+%d-%m-%y %T")
 FULLNAME="$DBNAME-$NOW.sql"
 ARCHNAME="$DBNAME-$NOW"
-BKP_DIR="/root/backups"
-LOG="/mnt/db_backup/logs/backup_db_$DBNAME.log"
+BKP_DIR="/home/akit/Code/backup_sh/backups"
 FINDIR="/mnt/db_backup"
+LOG="$FINDIR/logs/backup_db_$DBNAME.log"
 
-#удобненькая функция
+#send proccess log to logfile
 echolog() {
 	echo "$1" >> $LOG
 }
 
 
-echolog "#### START BACKUP $NOW_FULL ####" 
+echolog "#### $NOW_FULL START BACKUP ####" 
 #Test connect MYSQL
-mysql -e "quit" 2>/dev/null
-test_con=$?
 
-if [[ $test_con != 0 ]]; then
-	echolog "Mysql connect: FAILED!" 
-	echolog "Exit" 
+if ! mysql -e "quit" 2>/dev/null; then
+	echolog "Mysql connect: FAILED!"
 else
 	echolog "Mysql connect: SUCCESS!"
-	echolog "Start full mysqldump on DB: $DBNAME" 
-#Выгрузка и архивация базы
+	echolog "Mysqldump start on: $DBNAME" 
+#MYSQLDUMP
 	mysqldump $DBNAME > "$FULLNAME" 2>/dev/null
-		if [[ -s  $FULLNAME ]]; then
+	if ! mysqldump $DBNAME > "$FULLNAME" 2>/dev/null; then
+		echolog "Mysqldump created: FAILED!"
+		echolog "#########  FINISH  ##########" 
+		echolog "|----------------------------|" 
+		exit 1
+	else
 		echolog "Mysqldump created: SUCCESS!" 
 		tar -czf "$BKP_DIR/$ARCHNAME.gz" "$FULLNAME" 2> /dev/null
-			if [[ -s  $BKP_DIR/$ARCHNAME.gz ]]; then
-#Архивация 
-				echolog "Archive created: SUCCESS!" 
-				ARCH_SIZE=$(du -h $BKP_DIR/"$ARCHNAME".gz | cut -f1)
-				echolog "Archive size: $ARCH_SIZE" 
-			else
-				echolog "Archive created: FAILED!" 
-			fi
-		else
-		echolog "Mysqldump created: FAILED!" 
+		if [[ -s  $BKP_DIR/$ARCHNAME.gz ]]; then
+			ARCHNAME="$ARCHNAME.gz"
+			echolog "Archive created: SUCCESS!" 
+			ARCH_SIZE=$(du -h $BKP_DIR/"$ARCHNAME" | cut -f1)
+			echolog "Archive size: $ARCH_SIZE" 
+		fi
 	fi
-echolog "Deleted tmp file..." 
-rm "$FULLNAME"
-rsync $BKP_DIR/"$ARCHNAME".gz $FINDIR
 
+	echolog "Start copy backup to archive place"
+#COPY TO ARCHIVE SERVER
+	rsync $BKP_DIR/"$ARCHNAME" $FINDIR
+	if [[ -s $FINDIR/$ARCHNAME ]]; then
+		echolog "Copy file to archive: SUCCESS"
+	else
+		echolog "Copy to archive: FAILED"
+	fi
+
+	echolog "Deleted tmp file..." 
+	rm "$FULLNAME"
+	
 fi
-echolog "#########  FINISH  ##########" 
 echolog "|----------------------------|"  
 exit
